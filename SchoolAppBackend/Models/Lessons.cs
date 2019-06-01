@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NLog;
+using SchoolAppBackend.Database;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,31 +10,32 @@ namespace SchoolAppBackend.Models
     public class Lessons
     {
 
-        private Lessons() { }
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        public static Lessons NewInstance() {
-            var mLessons = new Lessons();
-            if (_lessonList == null)
-            {
-                _lessonList = new List<Lesson>();
-                _lessonList.Add(new Lesson {
-                    Id = "2019.05.29_20:07:01",
-                   Title = "Maths",});
-                _lessonList.Add(new Lesson
-                {
-                    Id = "2019.05.29_20:07:11",
-                    Title = "Physics",
-                });
-            
-            }
-            return mLessons;
+
+        #region Construction
+
+        public Lessons(SchoolAppDBContext dbContext) {
+            _dbContext = dbContext;
         }
 
-        private static IList<Lesson> _lessonList;
+        public static Lessons NewInstance() {
+            return new Lessons(new SchoolAppDBContext());
+        }
+
+        #endregion
+
+
+        private SchoolAppDBContext _dbContext;
 
 
         public IList<Lesson> GetLessons() {
-            return _lessonList;
+            var mList = new List<Lesson>();
+            foreach (LessonTable table in _dbContext.LessonTable)
+            {
+                mList.Add(LessonHelper.convertToLesson(table));
+            }
+            return mList;
         }
 
         public Responce Add(Lesson lesson)
@@ -45,21 +48,15 @@ namespace SchoolAppBackend.Models
                     mResponce.Warning = "Cannot add a null lesson.";
                     return mResponce;
                 }
-                else if (string.IsNullOrEmpty(lesson?.Id))
+                _dbContext.LessonTable.Add(new LessonTable
                 {
-                    mResponce.Warning = "Cannot add a lesson with no id.";
-                    return mResponce;
-                }
-                var oldLesson = _lessonList.FirstOrDefault(ls => ls.Id == lesson.Id);
-                if (oldLesson != null)
-                {
-                    mResponce.Warning = $"A lesson with the id {lesson.Id} exists already. Add cannot be completed. Try deleting the old lessonn first and retry.";
-                    return mResponce;
-                }
-                _lessonList.Add(lesson);
+                    Title = lesson.Title
+                });
+                _dbContext.SaveChanges();
                 mResponce.Success = true;
             }
             catch (Exception e) {
+                logger.Error(e);
                 mResponce.Error = e;
             }
             return mResponce;
@@ -72,21 +69,19 @@ namespace SchoolAppBackend.Models
             {
                 if (string.IsNullOrEmpty(lesson?.Id))
                 {
-                    mResponce.Warning = "Cannot update a Lesson with no id.";
+                    mResponce.Warning = "Cannot update a ILessonModel with no id.";
                     return mResponce;
                 }
-                var oldLesson = _lessonList.FirstOrDefault(ls => ls.Id == lesson.Id);
-                if (oldLesson == null)
+                _dbContext.LessonTable.Update(new LessonTable
                 {
-                    mResponce.Warning = $"No Lesson found with id: {lesson.Id}.";
-                    return mResponce;
-                }
-                var index = _lessonList.IndexOf(oldLesson);
-                _lessonList[index] = lesson;
+                    Title = lesson.Title
+                });
+                _dbContext.SaveChanges();
                 mResponce.Success = true;
             }
             catch (Exception e)
             {
+                logger.Error(e);
                 mResponce.Error = e;
             }
             return mResponce;
@@ -94,25 +89,29 @@ namespace SchoolAppBackend.Models
 
         public Responce Delete(string lessonId)
         {
+            // TODO: delete in DB
             var mResponce = new Responce();
             try
             {
                 if (string.IsNullOrEmpty(lessonId))
                 {
-                    mResponce.Warning = "Cannot delete a Lesson with no id.";
+                    mResponce.Warning = "Cannot delete a ILessonModel with no id.";
                     return mResponce;
                 }
-                var mLesson = _lessonList.FirstOrDefault(ls => ls.Id == lessonId);
+                var mLesson = _dbContext.LessonTable.First(tb => tb.Id == short.Parse(lessonId));
+
                 if (mLesson == null)
                 {
-                    mResponce.Warning = $"No Lesson found with id: {lessonId}.";
+                    mResponce.Warning = $"No ILessonModel found with id: {lessonId}.";
                     return mResponce;
                 }
-                _lessonList.Remove(mLesson);
+                _dbContext.LessonTable.Remove(mLesson);
+                _dbContext.SaveChanges();
                 mResponce.Success = true;
             }
             catch (Exception e)
             {
+                logger.Error(e);
                 mResponce.Error = e;
             }
             return mResponce;

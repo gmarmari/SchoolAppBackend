@@ -24,22 +24,19 @@ namespace SchoolAppBackend.Controlers
         [HttpPost("add")]
         public JsonResult AddLesson([FromBody] Lesson value)
         {
-            var mResponce = Lessons.NewInstance().Add(value);
-            return Json(mResponce);
+            return Json(Lessons.NewInstance().Add(value));
         }
         
         [HttpPut("update")]
         public JsonResult UpdateLesson([FromBody] Lesson lesson)
         {
-            var mResponce = Lessons.NewInstance().Update(lesson);
-            return Json(mResponce);
+            return Json(Lessons.NewInstance().Update(lesson));
         }
         
         [HttpDelete("delete/{lessonId}")]
         public JsonResult DeleteLesson(string lessonId)
         {
-            var mResponce = Lessons.NewInstance().Delete(lessonId);
-            return Json(mResponce);
+            return Json(Lessons.NewInstance().Delete(lessonId));
         }
     }
 }
